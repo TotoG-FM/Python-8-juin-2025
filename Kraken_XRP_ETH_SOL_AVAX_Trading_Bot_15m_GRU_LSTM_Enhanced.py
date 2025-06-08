@@ -461,8 +461,7 @@ def create_gru_model(input_shape):
         # Compilation avec XLA activé
         model.compile(
             optimizer=tf.keras.optimizers.Adam(learning_rate=LEARNING_RATE),
-            loss='mse',
-            jit_compile=True  # Active XLA ici, pas besoin du décorateur @tf.function
+            loss='mse'
         )
 
     return model
@@ -576,7 +575,6 @@ def prepare_last_sequence(returns, volume, volatility, momentum, volume_anomaly)
                                       momentum[-TREND_LOOKBACK:], volume_anomaly[-TREND_LOOKBACK:]))], dtype=np.float32)
 
 
-@tf.function(jit_compile=True)  # Activer XLA pour l'entraînement
 def train_model(model, X, y):
     # Détecter et choisir device (Metal GPU ou fallback CPU)
     device = "/GPU:0" if tf.config.list_physical_devices('GPU') else "/CPU:0"
@@ -662,7 +660,6 @@ def predict_price_trend(data, symbol):
         live_df['Volume_Anomaly'].values
     )
 
-    @tf.function(jit_compile=True)
     def predict_batch():
         return model.predict(last_sequence, verbose=0)
 
@@ -683,7 +680,6 @@ def predict_exit(data, symbol):
                                           live_df['Volatility'].values, live_df['Momentum'].values,
                                           live_df['Volume_Anomaly'].values)
 
-    @tf.function(jit_compile=True)  # Activer XLA pour la prédiction
     def predict_batch():
         return gru_models[f'{symbol}_15min'].predict(last_sequence, verbose=0)
 
