@@ -41,6 +41,7 @@ from hmmlearn.hmm import GaussianHMM
 from flask import Flask
 import threading
 import importlib
+from importlib import metadata
 
 
 # Charger les variables d’environnement et initialiser le client Kraken
@@ -55,6 +56,11 @@ tf.config.optimizer.set_jit(True)
 physical_devices = tf.config.list_physical_devices('GPU')
 print("GPUs disponibles :", physical_devices)
 if physical_devices:
+    try:
+        for d in physical_devices:
+            tf.config.experimental.set_memory_growth(d, True)
+    except Exception as e:
+        logger.warning(f"Impossible d'activer memory_growth: {e}")
     logger.info(f"GPU Metal détecté : {physical_devices[0]}")
 else:
     logger.warning("Aucun GPU Metal détecté, utilisation du CPU.")
@@ -169,9 +175,9 @@ def log_package_versions():
     logger.info("Versions des packages :")
     for package in packages:
         try:
-            version = importlib.metadata.version(package)
+            version = metadata.version(package)
             logger.info(f"  {package}: {version}")
-        except importlib.metadata.PackageNotFoundError:
+        except metadata.PackageNotFoundError:
             logger.warning(f"  {package}: Non installé")
 
 
