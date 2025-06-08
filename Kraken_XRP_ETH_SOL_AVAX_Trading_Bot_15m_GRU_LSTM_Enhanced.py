@@ -32,8 +32,7 @@ import optuna
 from newsapi.newsapi_client import NewsApiClient
 import nltk
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
-from arch import arch_model
-from sklearn.preprocessing import StandardScaler
+
 import matplotlib.pyplot as plt
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.api import VAR
@@ -356,21 +355,10 @@ def calculate_mu_sigma(data, symbol=None):
     if np.any(np.isnan(returns)) or np.any(np.isinf(returns)):
         logger.warning(f"Données invalides (NaN ou infini) dans 'Returns' pour {symbol}. Remplacement par 0.")
         returns = np.nan_to_num(returns, nan=0.0, posinf=0.0, neginf=0.0)
-    scaler = StandardScaler()
-    scaled_returns = scaler.fit_transform(returns.reshape(-1, 1)).flatten() * 1000
     weights = np.array([EWMA_LAMBDA ** i for i in range(len(returns) - 1, -1, -1)])
     weights /= weights.sum()
-    mu = np.sum(returns * weights) * 8760 / 1000
-    try:
-        model = arch_model(scaled_returns, mean='Zero', vol='Garch', p=1, q=1, dist='normal', rescale=True)
-        start_time = time.time()
-        res = model.fit(disp='off', options={'maxiter': 1000, 'tol': 1e-6})
-        if time.time() - start_time > 30:
-            raise Exception("Timeout GARCH")
-        sigma = res.conditional_volatility[-1] / 1000 * np.sqrt(8760)
-    except Exception as e:
-        logger.warning(f"Échec GARCH {symbol}: {e}. Utilisation d'EWMA.")
-        sigma = np.sqrt(np.mean(returns ** 2) * 8760)
+    mu = np.sum(returns * weights) * 8760
+    sigma = np.sqrt(np.sum(weights * returns ** 2) * 8760)
     return mu, sigma
 
 
